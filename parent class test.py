@@ -220,6 +220,9 @@ class Tower:
 		self.fire_counter_max = 2
 		self.fire_frame = 0
 
+		self.base_image = transform.scale(get_image(tower_sheet, tower_cos[-1]), (64,64))
+		self.base_rect = self.base_image.get_rect()
+
 	def kill(self): towers.remove(self)
 
 	def get_images_list(self, upgrade_num):
@@ -314,9 +317,9 @@ class Tower:
 			self.image = transform.rotate(self.original_image, 270 - degrees(self.angle_to_enemy))
 		self.rect = self.image.get_rect()
 		self.rect.center = self.pos
+		self.base_rect.center = self.rect.center
 
 		draw.circle(map_mask, BLUE, self.pos, tower_place_size)
-		# gfxdraw.filled_circle(map_surf, self.pos[0], self.pos[1], tower_place_size, BLUE+(150,))
 
 class Freeze(Tower):
 	def __init__(self, pos, rad, target='first'):
@@ -593,6 +596,7 @@ while running:
 
 	for t in towers:
 		t.update()
+		map_surf.blit(t.base_image, t.base_rect)
 		map_surf.blit(t.image, t.rect)
 
 	if map_rect.collidepoint((mx,my)):
