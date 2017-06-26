@@ -198,12 +198,17 @@ class Tower:
 		self.rect = self.image.get_rect()
 		self.rect.center = pos
 
+		self.upgrade_rad = [True, 20]
+		self.upgrade_bullet_amount = [False, 1]
+		self.upgrade_reload = [False, 2]
+
 		self.shoot_delay = 0
 		self.shoot_delay_max = 20		# After how long tower can shoot
 		self.bullet_speed = 15
 		self.bullet_size = 10
 		self.randomness = 5
 		self.bullets_per_frame = 1
+		self.bullet_amount = 1
 		self.weapon = Bullet
 
 		self.angle_to_enemy = None
@@ -293,6 +298,9 @@ class Tower:
 			for i in range(3):
 				self.fire_images.append(get_image(tower_sheet, tower_cos[self.sheet_index_number + self.upgrade_num*3+9+i]))
 				print(self.sheet_index_number + self.upgrade_num*3+9+i)
+				if self.upgrade_rad[0]: self.rad += self.upgrade_rad[1]
+				if self.upgrade_reload[0]: self.shoot_delay_max -= self.upgrade_reload[1]
+				if self.upgrade_bullet_amount[0]: self.bullet_amount += self.upgrade_bullet_amount[1]
 			self.old_upgrade_num = self.upgrade_num
 			self.original_image = self.images[0]
 
@@ -314,14 +322,17 @@ class Tower:
 				self.shoot_delay = 0
 				self.shooting = True
 				for i in range(self.bullets_per_frame):
-					if self.upgrade_num == 0:
-						shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), size=self.bullet_size)
-					elif self.upgrade_num == 1:
-						shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy+radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy+radians(10))), size=self.bullet_size)
-						shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy-radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy-radians(10))), size=self.bullet_size)
-					elif self.upgrade_num == 2:
-						shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*14*cos(self.angle_to_enemy+radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy+radians(40))), size=self.bullet_size)
-						shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*14*cos(self.angle_to_enemy-radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy-radians(40))), size=self.bullet_size)
+					if self.upgrade_bullet_amount[0]:
+						if self.upgrade_num == 0:
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), size=self.bullet_size)
+						elif self.upgrade_num == 1:
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy+radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy+radians(10))), size=self.bullet_size)
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy-radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy-radians(10))), size=self.bullet_size)
+						elif self.upgrade_num == 2:
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*14*cos(self.angle_to_enemy+radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy+radians(40))), size=self.bullet_size)
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*14*cos(self.angle_to_enemy-radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy-radians(40))), size=self.bullet_size)
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), size=self.bullet_size)
+					else:
 						shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), size=self.bullet_size)
 
 		if self.angle_to_enemy == None:
@@ -372,6 +383,9 @@ class Freeze(Tower):
 class StandardGun(Tower):
 	def __init__(self, pos, rad, target='first'):
 		super().__init__(pos, rad, target)
+		# self.upgrade_rad = [True, 20]
+		self.upgrade_bullet_amount[0] = True
+		# self.upgrade_reload = [False, 2]
 
 	def animate(self):
 		if self.shooting:
@@ -400,6 +414,7 @@ class StandardGun(Tower):
 class Gunner(Tower):
 	def __init__(self, pos, rad, target='first'):
 		super().__init__(pos, rad, target, sheet_index_number=36)
+		self.shoot_delay_max = 5
 
 	def animate(self):
 		if self.shooting:
@@ -541,7 +556,6 @@ while running:
 			if evt.key == K_RETURN:
 				if selected_tower != None and selected_tower.upgrade_num < 2:
 					selected_tower.upgrade_num += 1
-					selected_tower.rad += 20
 		elif evt.type == MOUSEBUTTONDOWN:
 			if evt.button == 1: click = True
 			if evt.button == 4:
