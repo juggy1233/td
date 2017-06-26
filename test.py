@@ -16,6 +16,4 @@ class Developer(Employee):
 		self.raise_amount = 1.1
 
 person1 = Developer('John', 'Smith', 70000)
-print(person1.pay)
 person1.apply_raise()
-print(person1.pay)
