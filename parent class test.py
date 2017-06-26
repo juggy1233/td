@@ -185,8 +185,8 @@ class FreezePellet:
 					break
 
 class Tower:
-	def __init__(self, pos, rad, target='first'):
-		self.sheet_index_number = 0
+	def __init__(self, pos, rad, target='first', sheet_index_number=0):
+		self.sheet_index_number = sheet_index_number
 		self.tower_types = ['first', 'strong', 'close']
 		self.type_index = self.tower_types.index(target)
 		self.rad, self.pos, self.target = rad, pos, self.tower_types[self.type_index]
@@ -213,7 +213,12 @@ class Tower:
 		self.shooting_counter_max = 3	# Shooting animation delay
 		self.shooting_frame = 0
 
-		self.fire_images = [get_image(tower_sheet, tower_cos[9]), get_image(tower_sheet, tower_cos[10]), get_image(tower_sheet, tower_cos[11])]
+		self.fire_images = []
+		for i in range(3):
+			self.fire_images.append(get_image(tower_sheet, tower_cos[self.sheet_index_number+9+i]))
+			# self.fire_images.append(get_image(tower_sheet, tower_cos[(self.sheet_index_number + (self.upgrade_num+1)*9) + i]))
+			print(self.sheet_index_number + (self.upgrade_num+1)*9 + i)
+		# self.fire_images = [get_image(tower_sheet, tower_cos[9]), get_image(tower_sheet, tower_cos[10]), get_image(tower_sheet, tower_cos[11])]
 		self.fire_counter = 0
 		self.fire_counter_max = 2
 		self.fire_frame = 0
@@ -273,6 +278,9 @@ class Tower:
 
 		if self.old_upgrade_num != self.upgrade_num:
 			self.images = self.get_images_list(self.upgrade_num)
+			self.fire_images = []
+			for i in range(3):
+				self.fire_images.append(get_image(tower_sheet, tower_cos[self.sheet_index_number+9+i]))
 			self.old_upgrade_num = self.upgrade_num
 			self.original_image = self.images[0]
 
@@ -314,15 +322,15 @@ class Tower:
 
 class Freeze(Tower):
 	def __init__(self, pos, rad, target='first'):
-		super().__init__(pos, rad, target)
 		self.sheet_index_number = 18
+		super().__init__(pos, rad, target, sheet_index_number=self.sheet_index_number)
 		self.shoot_delay_max = 5	# Time between shooting
 		self.bullet_size = 5
 		self.randomness = 40
 		self.bullets_per_frame = 5
 
 		self.weapon = FreezePellet
-		self.fire_images = [get_image(tower_sheet, tower_cos[27]), get_image(tower_sheet, tower_cos[28]), get_image(tower_sheet, tower_cos[29])]
+		# self.fire_images = [get_image(tower_sheet, tower_cos[27]), get_image(tower_sheet, tower_cos[28]), get_image(tower_sheet, tower_cos[29])]
 
 	def animate(self):
 		if self.shooting:
@@ -340,30 +348,15 @@ class Freeze(Tower):
 				if self.fire_frame >= len(self.fire_images):
 					self.fire_frame = 0
 
-			if self.upgrade_num != 0:
-				tmp = transform.scale(self.fire_images[self.fire_frame], (48,48))
-			else:
-				tmp = transform.scale(self.fire_images[self.fire_frame], (64,64))
+			# if self.upgrade_num != 0:
+			# 	tmp = transform.scale(self.fire_images[self.fire_frame], (48,48))
+			# else:
+			tmp = transform.scale(self.fire_images[self.fire_frame], (64,64))
 			tmp =  transform.rotate(tmp, 270 - degrees(self.angle_to_enemy))
 			tmpRect = tmp.get_rect()
-			if self.upgrade_num == 0:
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
-				map_surf.blit(tmp, tmpRect)
-			elif self.upgrade_num == 1:
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy+radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy+radians(10))
-				map_surf.blit(tmp, tmpRect)
+			tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
+			map_surf.blit(tmp, tmpRect)
 
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy-radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy-radians(10))
-				map_surf.blit(tmp, tmpRect)
-			elif self.upgrade_num == 2:
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
-				map_surf.blit(tmp, tmpRect)
-
-				tmpRect.center = self.rect.centerx + 2*14*cos(self.angle_to_enemy+radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy+radians(40))
-				map_surf.blit(tmp, tmpRect)
-
-				tmpRect.center = self.rect.centerx + 2*14*cos(self.angle_to_enemy-radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy-radians(40))
-				map_surf.blit(tmp, tmpRect)
 		self.original_image = self.images[self.shooting_frame]
 
 class Gunner(Tower):
