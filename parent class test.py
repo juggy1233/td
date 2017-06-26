@@ -68,12 +68,12 @@ def get_cos(file_path):
 	f = open(file_path).read().strip()
 	co_list = f.split('\n')
 	for i in co_list:
-		if i == '--':
-			co_list.remove(i)
+		if i[0] == '\t':
+			i = i[1:]
 	for pos in range(len(co_list)):
 		co_list[pos] = co_list[pos].split(' ')
 		for s in range(4):
-			co_list[pos][s] = int(co_list[pos][s])
+			co_list[pos][s] = int(co_list[pos][s]) * 32
 
 	return co_list
 
@@ -322,6 +322,7 @@ class Freeze(Tower):
 		self.bullets_per_frame = 5
 
 		self.weapon = FreezePellet
+		self.fire_images = [get_image(tower_sheet, tower_cos[27]), get_image(tower_sheet, tower_cos[28]), get_image(tower_sheet, tower_cos[29])]
 
 	def animate(self):
 		if self.shooting:
@@ -332,6 +333,37 @@ class Freeze(Tower):
 				if self.shooting_frame > len(self.images)-1:
 					self.shooting_frame = 0
 					self.shooting = False
+			self.fire_counter += 1
+			if self.fire_counter >= self.fire_counter_max:
+				self.fire_counter = 0
+				self.fire_frame += 1
+				if self.fire_frame >= len(self.fire_images):
+					self.fire_frame = 0
+
+			if self.upgrade_num != 0:
+				tmp = transform.scale(self.fire_images[self.fire_frame], (48,48))
+			else:
+				tmp = transform.scale(self.fire_images[self.fire_frame], (64,64))
+			tmp =  transform.rotate(tmp, 270 - degrees(self.angle_to_enemy))
+			tmpRect = tmp.get_rect()
+			if self.upgrade_num == 0:
+				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
+				map_surf.blit(tmp, tmpRect)
+			elif self.upgrade_num == 1:
+				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy+radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy+radians(10))
+				map_surf.blit(tmp, tmpRect)
+
+				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy-radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy-radians(10))
+				map_surf.blit(tmp, tmpRect)
+			elif self.upgrade_num == 2:
+				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
+				map_surf.blit(tmp, tmpRect)
+
+				tmpRect.center = self.rect.centerx + 2*14*cos(self.angle_to_enemy+radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy+radians(40))
+				map_surf.blit(tmp, tmpRect)
+
+				tmpRect.center = self.rect.centerx + 2*14*cos(self.angle_to_enemy-radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy-radians(40))
+				map_surf.blit(tmp, tmpRect)
 		self.original_image = self.images[self.shooting_frame]
 
 class Gunner(Tower):
