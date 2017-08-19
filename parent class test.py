@@ -82,7 +82,7 @@ def load_images():
 	master_sheet = image.load('images/master_sheet.png')
 	tower_sheet = image.load('images/tower_sheet.png')
 	tower_cos = get_cos('images/tower_co.txt')
-	time.wait(2000)
+	# time.wait(2000)
 
 loading_ani_pics = []
 folder = 'images/loading images 2'
@@ -517,9 +517,9 @@ max_enemies = 25
 
 tower_place_size = 30
 
-for i in [-100,0,100]:
-	t1 = Freeze((map_rect.width//2+i, map_rect.height//2 - 75), 200)
-	towers.append(t1)
+# for i in [-100,0,100]:
+# 	t1 = Freeze((map_rect.width//2+i, map_rect.height//2 - 75), 200)
+# 	towers.append(t1)
 
 key.set_repeat(500,20)
 while running:
@@ -543,9 +543,9 @@ while running:
 					tool = 'selection'
 					selected_tower = None
 
-			if evt.key == K_1: tool = 'close'
-			if evt.key == K_2: tool = 'strong'
-			if evt.key == K_3: tool = 'first'
+			if evt.key == K_1: tool = 'standard'
+			if evt.key == K_2: tool = 'freeze'
+			if evt.key == K_3: tool = 'gunner'
 
 			if evt.key == K_t:
 				if FPS == 60:
@@ -649,6 +649,7 @@ while running:
 
 
 		else:
+			mx, my = mx - mx % 20, my - my % 20
 			color_on_mask = map_mask.get_at((mx,my))
 			if color_on_mask != BLUE:
 				gfxdraw.filled_circle(map_surf, mx, my, tower_place_size, GREEN+(100,))
@@ -656,9 +657,11 @@ while running:
 				gfxdraw.filled_circle(map_surf, mx, my, tower_place_size, RED+(100,))
 			if let_go:
 				if color_on_mask != BLUE:
-					t = Gunner((mx,my), 150, target=tool)
+					if tool == 'standard': t = StandardGun((mx,my), 150, target='first')
+					if tool == 'freeze': t = Freeze((mx,my), 150, target='first')
+					if tool == 'gunner': t = Gunner((mx,my), 150, target='first')
 					towers.append(t)
-				tool = 'selection'
+					tool = 'selection'
 	screen.blit(map_surf, map_rect)
 	display.flip()
 	myClock.tick(FPS)
