@@ -297,7 +297,6 @@ class Tower:
 			self.fire_images = []
 			for i in range(3):
 				self.fire_images.append(get_image(tower_sheet, tower_cos[self.sheet_index_number + self.upgrade_num*3+9+i]))
-				print(self.sheet_index_number + self.upgrade_num*3+9+i)
 				if self.upgrade_rad[0]: self.rad += self.upgrade_rad[1]
 				if self.upgrade_reload[0]: self.shoot_delay_max -= self.upgrade_reload[1]
 				if self.upgrade_bullet_amount[0]: self.bullet_amount += self.upgrade_bullet_amount[1]
