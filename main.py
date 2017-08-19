@@ -2,6 +2,7 @@ import os, itertools, threading, glob
 import pygame.gfxdraw as gfxdraw
 from pygame import *
 from math import *
+from random import *
 
 vec = math.Vector2
 
@@ -37,7 +38,8 @@ map4points = [(0, 0), (0, 640), (640, 640), (640, 0), (100, 0), (100, 540), (540
 map5points = [(300, 640), (300, 450), (80, 540), (210, 310), (70, 60), (320, 200), (570, 60), (440, 310), (540, 540), (340, 450), (330, 640)]
 map6points = [(0, 0), (10, 0), (20, 0), (30, 0), (40, 0), (50, 0), (60, 0), (70, 0), (80, 0), (90, 0), (100, 0), (110, 0), (110, 0), (120, 0), (130, 0), (150, 0), (150, 0), (160, 0), (170, 0), (190, 0), (190, 0), (210, 0), (230, 0), (240, 0), (250, 0), (260, 0), (270, 0), (290, 0), (290, 0), (310, 10), (320, 10), (330, 10), (350, 10), (370, 0), (380, 0), (410, 0), (420, 0), (440, 0), (440, 0), (450, 0), (460, 0), (460, 0), (480, 0), (490, 0), (520, 0), (530, 0), (550, 0), (560, 0), (570, 0), (600, 10), (610, 10), (610, 10), (610, 20), (620, 40), (600, 60), (590, 80), (520, 120), (440, 160), (380, 120), (400, 10), (530, 40), (530, 80), (470, 100), (410, 80), (310, 50), (250, 50), (210, 40), (170, 50), (130, 60), (100, 90), (80, 110), (80, 140), (80, 180), (80, 230), (80, 280), (100, 320), (110, 340), (190, 400), (260, 430), (350, 430), (590, 240), (590, 220), (550, 150), (430, 130), (300, 110), (240, 170), (220, 250), (150, 350), (40, 420), (0, 490), (0, 550), (20, 590), (30, 600), (80, 610), (120, 610), (180, 610), (240, 610), (320, 620), (380, 600), (430, 570), (450, 500), (430, 450), (370, 490), (340, 530), (290, 550), (220, 570), (120, 570), (80, 530), (70, 450), (90, 440), (130, 400), (180, 370), (190, 320), (170, 290), (140, 280), (100, 250), (70, 220), (60, 170), (70, 140), (110, 100), (190, 100), (310, 120), (390, 150), (450, 190), (470, 230), (500, 300), (530, 380), (540, 430), (570, 490), (640, 640)]
 map7points = [(0, 0),(0, 310), (640, 310), (640, 0), (330, 0), (330, 640), (640, 640), (640, 330), (0, 330), (0, 640), (310, 640), (310, 0), (0, 0)]
-all_maps_points = [map1points,map2points,map3points,map4points, map5points, map6points, map7points]
+map8points = [(0, 10), (20, 190), (180, 110), (140, 70), (140, 230), (320, 340), (410, 250), (330, 120), (430, 70), (580, 90), (490, 210), (560, 30), (740, 50), (790, 210), (620, 240), (300, 50), (70, 270), (70, 470), (500, 420), (800, 500)]
+all_maps_points = [map1points,map2points,map3points,map4points, map5points, map6points, map7points, map8points]
 current_map_index = 0
 current_map = all_maps_points[current_map_index]
 map_mask = Surface((640,640))
@@ -66,12 +68,12 @@ def get_cos(file_path):
 	f = open(file_path).read().strip()
 	co_list = f.split('\n')
 	for i in co_list:
-		if i == '--':
-			co_list.remove(i)
+		if i[0] == '\t':
+			i = i[1:]
 	for pos in range(len(co_list)):
 		co_list[pos] = co_list[pos].split(' ')
 		for s in range(4):
-			co_list[pos][s] = int(co_list[pos][s])
+			co_list[pos][s] = int(co_list[pos][s]) * 32
 
 	return co_list
 
@@ -99,6 +101,7 @@ def loading_animation():
 		display.flip()
 		time.wait(5)
 
+# Give a target function and this function will thread it with an animation
 def do_loading(target, args=[]):
 	global done_loading_images
 	done_loading_images = False
@@ -113,44 +116,78 @@ def do_loading(target, args=[]):
 
 do_loading(load_images)
 
-
-class Bullet(sprite.Sprite):
-	def __init__(self, angle, pos, org, speed=30, size=10, lives=0):
-		sprite.Sprite.__init__(self)
-		all_sprites.add(self)
-		bullets.add(self)
-		self.pos, self.angle, self.speed, self.orginal_tower, self.lives = pos, angle, speed, org, lives
+class Bullet:
+	def __init__(self, angle, pos, speed=30, size=10, lives=0):
+		bullets.append(self)
+		self.pos, self.angle, self.speed, self.lives = pos, angle, speed, lives
 		self.image = Surface((size, size), SRCALPHA)
 		self.rect = self.image.get_rect()
 		draw.circle(self.image, GREEN, self.rect.center, self.rect.width//2)
 		self.rect.center = pos
+		self.pos = vec(pos[0], pos[1])
 		self.vx = self.speed * cos(self.angle)
 		self.vy = self.speed * sin(self.angle)
 
+	def kill(self):
+		bullets.remove(self)
+
 	def move(self):
 		global dead_enemies
-		self.rect.x += self.vx
-		self.rect.y += self.vy
+		self.pos.x += self.vx
+		self.pos.y += self.vy
+		self.rect.center = self.pos
 
-		if not screen_rect.colliderect(self.rect):
+		if not map_rect.colliderect(self.rect):
 			self.kill()
+		else:
+			for e in enemies:
+				if e.rect.colliderect(self.rect):
+					e.health -= 1
+					if e.health <= 0:
+						e.kill()
+						dead_enemies += 1
+					self.lives -= 1
+					if self.lives <= 0:
+						self.kill()
+					break
 
-		for e in enemies:
-			if e.rect.colliderect(self.rect):
-				e.health -= 1
-				if e.health <= 0:
-					e.kill()
-					enemies.remove(e)
-					dead_enemies += 1
-				self.lives -= 1
-				if self.lives <= 0:
+class FreezePellet:
+	def __init__(self, angle, pos, size=10):
+		bullets.append(self)
+		self.pos, self.angle, self.speed = pos, angle, randint(5,30) / 10
+		self.image = Surface((size, size), SRCALPHA)
+		self.rect = self.image.get_rect()
+		draw.circle(self.image, choice([BLUE, (100,100,255), (150,150,255), (50,50,255)]), self.rect.center, self.rect.width//2)
+		self.rect.center = pos
+		self.pos = vec(pos[0], pos[1])
+		self.vx = self.speed * cos(self.angle)
+		self.vy = self.speed * sin(self.angle)
+		self.fric = 0.025
+
+	def kill(self):
+		bullets.remove(self)
+
+	def move(self):
+		global dead_enemies
+		self.vx -= self.vx * self.fric
+		self.vy -= self.vy * self.fric
+		self.pos.x += self.vx
+		self.pos.y += self.vy
+		self.rect.center = self.pos
+
+		if not map_rect.colliderect(self.rect) or hypot(self.vx,self.vy) < 0.1:
+			self.kill()
+		else:
+			for e in enemies:
+				if e.rect.colliderect(self.rect):
+					e.frozen_counter = 0
 					self.kill()
-				break
+					break
 
-class Tower(sprite.Sprite):
-	def __init__(self, pos, rad, target='close', type='norm'):
-		sprite.Sprite.__init__(self)
-		self.tower_types = ['first', 'strong', 'close']
+class Tower:
+	def __init__(self, pos, rad, target='first', sheet_index_number=0):
+		self.sheet_index_number = sheet_index_number
+		self.tower_types = ['first', 'strong', 'close', 'last']
 		self.type_index = self.tower_types.index(target)
 		self.rad, self.pos, self.target = rad, pos, self.tower_types[self.type_index]
 		self.old_upgrade_num = 1
@@ -161,8 +198,18 @@ class Tower(sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.center = pos
 
+		self.upgrade_rad = [True, 20]
+		self.upgrade_bullet_amount = [False, 1]
+		self.upgrade_reload = [False, 2]
+
 		self.shoot_delay = 0
 		self.shoot_delay_max = 20		# After how long tower can shoot
+		self.bullet_speed = 15
+		self.bullet_size = 10
+		self.randomness = 5
+		self.bullets_per_frame = 1
+		self.bullet_amount = 1
+		self.weapon = Bullet
 
 		self.angle_to_enemy = None
 
@@ -171,15 +218,22 @@ class Tower(sprite.Sprite):
 		self.shooting_counter_max = 3	# Shooting animation delay
 		self.shooting_frame = 0
 
-		self.fire_images = [get_image(tower_sheet, tower_cos[9]), get_image(tower_sheet, tower_cos[10]), get_image(tower_sheet, tower_cos[11])]
+		self.fire_images = []
+		for i in range(3):
+			self.fire_images.append(get_image(tower_sheet, tower_cos[self.sheet_index_number + self.upgrade_num*3+9+i]))
 		self.fire_counter = 0
 		self.fire_counter_max = 2
 		self.fire_frame = 0
 
+		self.base_image = transform.scale(get_image(tower_sheet, tower_cos[-1]), (64,64))
+		self.base_rect = self.base_image.get_rect()
+
+	def kill(self): towers.remove(self)
+
 	def get_images_list(self, upgrade_num):
 		l = []
 		for i in range(3):
-			tmp = get_image(tower_sheet, tower_cos[upgrade_num*3+i])
+			tmp = get_image(tower_sheet, tower_cos[self.sheet_index_number + upgrade_num*3+i])
 			l.append(transform.scale(tmp, (tmp.get_width()*2, tmp.get_height()*2)))
 		l.append(l[1])
 		return l
@@ -207,6 +261,17 @@ class Tower(sprite.Sprite):
 			return enemies[enemies.index(en[dist_traveled.index(max(dist_traveled))])]
 		return None
 
+	def find_last_enemy(self):
+		dist_traveled = []
+		en = []
+		for e in enemies:
+			if hypot(self.rect.centerx - e.rect.centerx, self.rect.centery - e.rect.centery) <= self.rad:
+				dist_traveled.append(e.distance_traveled)
+				en.append(e)
+		if dist_traveled:
+			return enemies[enemies.index(en[dist_traveled.index(min(dist_traveled))])]
+		return None
+
 	def find_strong_enemy(self):
 		lives = []
 		en = []
@@ -229,6 +294,13 @@ class Tower(sprite.Sprite):
 
 		if self.old_upgrade_num != self.upgrade_num:
 			self.images = self.get_images_list(self.upgrade_num)
+			self.fire_images = []
+			for i in range(3):
+				self.fire_images.append(get_image(tower_sheet, tower_cos[self.sheet_index_number + self.upgrade_num*3+9+i]))
+				print(self.sheet_index_number + self.upgrade_num*3+9+i)
+				if self.upgrade_rad[0]: self.rad += self.upgrade_rad[1]
+				if self.upgrade_reload[0]: self.shoot_delay_max -= self.upgrade_reload[1]
+				if self.upgrade_bullet_amount[0]: self.bullet_amount += self.upgrade_bullet_amount[1]
 			self.old_upgrade_num = self.upgrade_num
 			self.original_image = self.images[0]
 
@@ -238,6 +310,8 @@ class Tower(sprite.Sprite):
 			target_enemy = self.find_close_enemy()
 		if self.target == 'strong':
 			target_enemy = self.find_strong_enemy()
+		if self.target == 'last':
+			target_enemy = self.find_last_enemy()
 
 
 		self.animate()
@@ -247,16 +321,19 @@ class Tower(sprite.Sprite):
 			if self.shoot_delay >= self.shoot_delay_max:
 				self.shoot_delay = 0
 				self.shooting = True
-				bullet_size = 10
-				if self.upgrade_num == 0:
-					shot = Bullet(self.angle_to_enemy, (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), self, size=bullet_size)
-				elif self.upgrade_num == 1:
-					shot = Bullet(self.angle_to_enemy, (self.rect.centerx + 2*16*cos(self.angle_to_enemy+radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy+radians(10))), self, size=bullet_size)
-					shot = Bullet(self.angle_to_enemy, (self.rect.centerx + 2*16*cos(self.angle_to_enemy-radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy-radians(10))), self, size=bullet_size)
-				elif self.upgrade_num == 2:
-					shot = Bullet(self.angle_to_enemy, (self.rect.centerx + 2*14*cos(self.angle_to_enemy+radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy+radians(40))), self, size=bullet_size)
-					shot = Bullet(self.angle_to_enemy, (self.rect.centerx + 2*14*cos(self.angle_to_enemy-radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy-radians(40))), self, size=bullet_size)
-					shot = Bullet(self.angle_to_enemy, (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), self, size=bullet_size)
+				for i in range(self.bullets_per_frame):
+					if self.upgrade_bullet_amount[0]:
+						if self.upgrade_num == 0:
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), size=self.bullet_size)
+						elif self.upgrade_num == 1:
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy+radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy+radians(10))), size=self.bullet_size)
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy-radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy-radians(10))), size=self.bullet_size)
+						elif self.upgrade_num == 2:
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*14*cos(self.angle_to_enemy+radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy+radians(40))), size=self.bullet_size)
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*14*cos(self.angle_to_enemy-radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy-radians(40))), size=self.bullet_size)
+							shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), size=self.bullet_size)
+					else:
+						shot = self.weapon(self.angle_to_enemy+radians(randint(-self.randomness, self.randomness)), (self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)), size=self.bullet_size)
 
 		if self.angle_to_enemy == None:
 			self.image = transform.rotate(self.original_image, 0)
@@ -264,8 +341,51 @@ class Tower(sprite.Sprite):
 			self.image = transform.rotate(self.original_image, 270 - degrees(self.angle_to_enemy))
 		self.rect = self.image.get_rect()
 		self.rect.center = self.pos
+		self.base_rect.center = self.rect.center
 
 		draw.circle(map_mask, BLUE, self.pos, tower_place_size)
+
+class Freeze(Tower):
+	def __init__(self, pos, rad, target='first'):
+		self.sheet_index_number = 18
+		super().__init__(pos, rad, target, sheet_index_number=self.sheet_index_number)
+		self.shoot_delay_max = 5	# Time between shooting
+		self.bullet_size = 5
+		self.randomness = 40
+		self.bullets_per_frame = 5
+
+		self.weapon = FreezePellet
+
+	def animate(self):
+		if self.shooting:
+			self.shooting_counter += 1
+			if self.shooting_counter >= self.shooting_counter_max:
+				self.shooting_counter = 0
+				self.shooting_frame += 1
+				if self.shooting_frame > len(self.images)-1:
+					self.shooting_frame = 0
+					self.shooting = False
+			self.fire_counter += 1
+			if self.fire_counter >= self.fire_counter_max:
+				self.fire_counter = 0
+				self.fire_frame += 1
+				if self.fire_frame >= len(self.fire_images):
+					self.fire_frame = 0
+
+			tmp = transform.scale(self.fire_images[self.fire_frame], (64,64))
+			tmp =  transform.rotate(tmp, 270 - degrees(self.angle_to_enemy))
+			tmpRect = tmp.get_rect()
+			tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
+			map_surf.blit(tmp, tmpRect)
+
+		self.original_image = self.images[self.shooting_frame]
+
+class StandardGun(Tower):
+	def __init__(self, pos, rad, target='first'):
+		super().__init__(pos, rad, target)
+		# self.upgrade_rad = [True, 20]
+		self.upgrade_bullet_amount[0] = True
+		# self.upgrade_reload = [False, 2]
 
 	def animate(self):
 		if self.shooting:
@@ -284,35 +404,44 @@ class Tower(sprite.Sprite):
 				if self.fire_frame >= len(self.fire_images):
 					self.fire_frame = 0
 
-			if self.upgrade_num != 0:
-				tmp = transform.scale(self.fire_images[self.fire_frame], (48,48))
-			else:
-				tmp = transform.scale(self.fire_images[self.fire_frame], (64,64))
+			tmp = transform.scale(self.fire_images[self.fire_frame], (64,64))
 			tmp =  transform.rotate(tmp, 270 - degrees(self.angle_to_enemy))
 			tmpRect = tmp.get_rect()
-			if self.upgrade_num == 0:
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
-				map_surf.blit(tmp, tmpRect)
-			elif self.upgrade_num == 1:
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy+radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy+radians(10))
-				map_surf.blit(tmp, tmpRect)
-
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy-radians(10)), self.rect.centery + 2*16*sin(self.angle_to_enemy-radians(10))
-				map_surf.blit(tmp, tmpRect)
-			elif self.upgrade_num == 2:
-				tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
-				map_surf.blit(tmp, tmpRect)
-
-				tmpRect.center = self.rect.centerx + 2*14*cos(self.angle_to_enemy+radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy+radians(40))
-				map_surf.blit(tmp, tmpRect)
-
-				tmpRect.center = self.rect.centerx + 2*14*cos(self.angle_to_enemy-radians(40)), self.rect.centery + 2*14*sin(self.angle_to_enemy-radians(40))
-				map_surf.blit(tmp, tmpRect)
+			tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
+			map_surf.blit(tmp, tmpRect)
 		self.original_image = self.images[self.shooting_frame]
 
-class Enemy(sprite.Sprite):
+class Gunner(Tower):
+	def __init__(self, pos, rad, target='first'):
+		super().__init__(pos, rad, target, sheet_index_number=36)
+		self.shoot_delay_max = 5
+
+	def animate(self):
+		if self.shooting:
+			self.shooting_counter += 1
+			if self.shooting_counter >= self.shooting_counter_max:
+				self.shooting_counter = 0
+				self.shooting_frame += 1
+				if self.shooting_frame > len(self.images)-1:
+					self.shooting_frame = 0
+					self.shooting = False
+
+			self.fire_counter += 1
+			if self.fire_counter >= self.fire_counter_max:
+				self.fire_counter = 0
+				self.fire_frame += 1
+				if self.fire_frame >= len(self.fire_images):
+					self.fire_frame = 0
+
+			tmp = transform.scale(self.fire_images[self.fire_frame], (64,64))
+			tmp =  transform.rotate(tmp, 270 - degrees(self.angle_to_enemy))
+			tmpRect = tmp.get_rect()
+			tmpRect.center = self.rect.centerx + 2*16*cos(self.angle_to_enemy), self.rect.centery + 2*16*sin(self.angle_to_enemy)
+			map_surf.blit(tmp, tmpRect)
+		self.original_image = self.images[self.shooting_frame]
+
+class Enemy:
 	def __init__(self, health=10):
-		sprite.Sprite.__init__(self)
 		self.total_health = health
 		self.health = health
 		self.speed = enemy_speeds[self.health-1]
@@ -325,10 +454,19 @@ class Enemy(sprite.Sprite):
 		self.vel = vec(0, 0)
 		self.pos = vec(current_map[0][0], current_map[0][1])
 		self.distance_traveled = 0
+		self.frozen_counter_max = 240
+		self.frozen_counter = self.frozen_counter_max + 1
+
+	def kill(self):
+		enemies.remove(self)
 
 	def move(self):
 		global dead_enemies
-		self.speed = enemy_speeds[self.health-1]
+		self.frozen_counter += 1
+		if self.frozen_counter < self.frozen_counter_max:
+			self.speed = enemy_speeds[self.health-1] * 3/5
+		else:
+			self.speed = enemy_speeds[self.health-1]
 		self.distance_traveled += self.speed
 		while True:
 			try:
@@ -339,12 +477,12 @@ class Enemy(sprite.Sprite):
 		x2 = current_map[self.seg][0]
 		y2 = current_map[self.seg][1]
 		dist=hypot(self.rect.centerx-x2,self.rect.centery-y2)
-		if dist<=3 and self.seg<len(current_map)-1:
-			self.seg+=1
-		if dist<=1 and current_map[self.seg] == current_map[-1]:
-			dead_enemies += 1
-			enemies.remove(self)
-			self.kill()
+		if dist<=self.speed:
+			if self.seg<len(current_map)-1:
+				self.seg+=1
+			elif current_map[self.seg] == current_map[-1]:
+				dead_enemies += 1
+				self.kill()
 		xdiff = self.rect.centerx - current_map[self.seg][0]
 		ydiff = self.rect.centery - current_map[self.seg][1]
 		angle = radians(180) + atan2(ydiff, xdiff)
@@ -361,24 +499,27 @@ class Enemy(sprite.Sprite):
 		draw.rect(map_surf, GREY, (self.rect.x-self.rect.width//2, self.rect.y - 20, self.rect.width*2, 10))
 		draw.rect(map_surf, GREEN, (self.rect.x-self.rect.width//2, self.rect.y - 20, self.rect.width*2/self.total_health*self.health, 10))
 
-all_sprites = sprite.Group()
-towers = sprite.Group()
-bullets = sprite.Group()
+towers = []
+bullets = []
 enemies = []
 dead_enemies = 0
+
+side_bar_slot1 = Rect(side_bar_rect.x + 20, 20, 50, 50)
+side_bar_slot2 = Rect(side_bar_rect.x + 90, 20, 50, 50)
+side_bar_slot3 = Rect(side_bar_rect.x + 20, 90, 50, 50)
+side_bar_slot4 = Rect(side_bar_rect.x + 90, 90, 50, 50)
 
 spawning_in = False
 round_going = False
 spawn_delay = 0
-spawn_delay_max = 10
-max_enemies = 10
+spawn_delay_max = 7
+max_enemies = 25
 
 tower_place_size = 30
 
 for i in [-100,0,100]:
-	t1 = Tower((map_rect.width//2+i, map_rect.height//2 - 75), 200, target='first')
-	all_sprites.add(t1)
-	towers.add(t1)
+	t1 = Freeze((map_rect.width//2+i, map_rect.height//2 - 75), 200)
+	towers.append(t1)
 
 key.set_repeat(500,20)
 while running:
@@ -415,7 +556,6 @@ while running:
 			if evt.key == K_RETURN:
 				if selected_tower != None and selected_tower.upgrade_num < 2:
 					selected_tower.upgrade_num += 1
-					selected_tower.rad += 20
 		elif evt.type == MOUSEBUTTONDOWN:
 			if evt.button == 1: click = True
 			if evt.button == 4:
@@ -444,6 +584,10 @@ while running:
 	draw.rect(screen, YELLOW, (side_bar_rect.x + 2, side_bar_rect.y + 2, side_bar_rect.width - 4, side_bar_rect.height - 4), 5)
 	draw.rect(screen, WHITE, map_rect)
 	gfxdraw.box(screen, start_round_rect, BLUE)
+	draw.rect(screen, GREY, side_bar_slot1)
+	draw.rect(screen, GREY, side_bar_slot2)
+	draw.rect(screen, GREY, side_bar_slot3)
+	draw.rect(screen, GREY, side_bar_slot4)
 
 	for i in range(len(current_map)-1):
 		draw.line(map_surf, BLACK, current_map[i], current_map[i+1], 3)
@@ -459,7 +603,6 @@ while running:
 			spawn_delay = 0
 			e = Enemy(health=5)
 			enemies.append(e)
-			all_sprites.add(e)
 			if len(enemies) + dead_enemies >= max_enemies:
 				spawning_in = False
 
@@ -468,8 +611,10 @@ while running:
 
 	for b in bullets:
 		b.move()
+		map_surf.blit(b.image, b.rect)
 	for e in enemies:
 		e.move()
+		map_surf.blit(e.image, e.rect)
 
 	if selected_tower != None:
 		gfxdraw.filled_circle(map_surf, selected_tower.rect.centerx, selected_tower.rect.centery, selected_tower.rad, BLACK+(100,))	
@@ -486,14 +631,16 @@ while running:
 
 	for t in towers:
 		t.update()
+		map_surf.blit(t.base_image, t.base_rect)
+		map_surf.blit(t.image, t.rect)
 
-	all_sprites.draw(map_surf)
 	if map_rect.collidepoint((mx,my)):
 		if tool == 'selection':
 			if let_go:
 				found_tower = False
 				for t in towers:
-					if t.rect.collidepoint((mx,my)) and t != selected_tower:
+					# if t.rect.collidepoint((mx,my)) and t != selected_tower:
+					if hypot(mx - t.rect.centerx, my - t.rect.centery) <= tower_place_size and t != selected_tower:
 						selected_tower = t
 						found_tower = True
 						break
@@ -509,9 +656,8 @@ while running:
 				gfxdraw.filled_circle(map_surf, mx, my, tower_place_size, RED+(100,))
 			if let_go:
 				if color_on_mask != BLUE:
-					t = Tower((mx,my), 150, target=tool)
-					all_sprites.add(t)
-					towers.add(t)
+					t = Gunner((mx,my), 150, target=tool)
+					towers.append(t)
 				tool = 'selection'
 	screen.blit(map_surf, map_rect)
 	display.flip()
